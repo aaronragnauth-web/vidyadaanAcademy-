@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiple Choice Quiz — 30 Random Questions (80% pass)</title>
+<style>
+:root{--bg:#f4f7fb;--card:#ffffff;--accent:#2563eb;--muted:#6b7280;--success:#16a34a;--fail:#dc2626; --return-btn-bg:#e5e7eb; --return-btn-color:#1f2937; --timer-warn:#f59e0b; --overall-timer-bg:#fef3c7; --overall-timer-color:#d97706;}
+*{box-sizing:border-box}
+body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); margin:0; color:#111}
+.wrap{max-width:900px;margin:36px auto;padding:22px}
+.card{background:var(--card);border-radius:14px;padding:22px;box-shadow:0 6px 20px rgba(16,24,40,0.06)}
+/* Updated header to use flex for button alignment */
+header{display: flex; justify-content: space-between; align-items: flex-start;}
+header h1{margin:0;font-size:20px}
+header p{margin:6px 0 0;color:var(--muted);font-size:13px}
+
+/* New: Overall Timer Box */
+.overall-timer-box{
+  background: var(--overall-timer-bg);
+  color: var(--overall-timer-color);
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  margin-top: 10px;
+  text-align: center;
+  border: 1px solid #fcd34d;
+}
+.overall-timer-box.critical{
+  background: #fef2f2;
+  color: var(--fail);
+  border-color: var(--fail);
+}
+
+
+.meta{display:flex;gap:12px;align-items:center;margin-top:16px}
+.meta .pill{background:#eef2ff;color:var(--accent);padding:6px 10px;border-radius:999px;font-weight:600;font-size:13px}
+.progress-wrap{margin:18px 0}
+.progress{height:10px;background:#e6eefc;border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7c3aed);width:0%}
+.qbox{margin-top:18px}
+.question-header{
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 12px;
+    /* FIX: Allow content to wrap */
+    flex-wrap: wrap; 
+}
+.question{
+    font-weight:600; 
+    margin: 0;
+    /* FIX: Force this element to take full width when using <br> */
+    width: 100%;
+    margin-bottom: 10px;
+}
+.timer{font-weight: 700; color: var(--accent); font-size: 16px; padding: 4px 8px; border-radius: 6px; border: 1px solid #eef2ff;}
+.timer.warn{color: var(--fail); border-color: var(--fail);}
+.choices{display:grid;gap:10px}
+.choice{background:#fbfdff;border:1px solid #eef3ff;padding:12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:12px; transition: border-color 0.2s;}
+.choice:hover{border-color:var(--accent);}
+.choice input{accent-color:var(--accent)}
+.controls{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:18px}
+button{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer; transition: background-color 0.2s;}
+button:hover:not([disabled]){background:#1d4ed8;}
+button[disabled]{opacity:.5;cursor:default}
+.muted{color:var(--muted);font-size:14px}
+
+/* Return Button Style */
+#returnBtn{
+  background: var(--return-btn-bg);
+  color: var(--return-btn-color);
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-left: 20px;
+  align-self: center;
+  border: 1px solid #d1d5db;
+}
+#returnBtn:hover{
+  background: #d1d5db;
+}
+
+.result{display:none;margin-top:18px}
+.result.show{display:block}
+.score{font-size:20px;font-weight:700}
+.pass{color:var(--success)}
+.fail{color:var(--fail)}
+.review{margin-top:16px}
+.review .rev-item{padding:12px;border-radius:8px;border:1px solid #eef2ff;margin-bottom:10px;background:#fff}
+.correct-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#ecfaef;color:var(--success);font-weight:700;margin-left:10px}
+.wrong-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fff1f2;color:var(--fail);font-weight:700;margin-left:10px}
+.unanswered-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fefce8;color:#a16207;font-weight:700;margin-left:10px}
+
+
+footer{margin-top:22px;text-align:center;color:var(--muted);font-size:13px}
+@media (max-width:600px){
+  .wrap{padding:12px}
+  header { flex-direction: column; align-items: flex-start; }
+  #returnBtn { margin-left: 0; margin-top: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<header>
+  <div>
+    <h1>Multiple Choice Quiz — 30 Random Questions</h1>
+    <p>Pass rate: <strong>80%</strong> (24/30). Questions are randomly selected each time you load the page.</p>
+  </div>
+<a href="blended_it.html">
+    <button id="returnBtn">
+        ← Return to main page
+    </button>
+</a>
+
+</header>
+<div class="overall-timer-box">
+  Time Remaining for Quiz: <span id="overallTimerDisplay">30:00</span>
+</div>
+<div class="meta">
+<div class="pill">30 questions</div>
+<div class="muted">60 seconds per question limit, 30 minutes overall limit.</div>
+</div>
+<div class="progress-wrap">
+<div class="progress" aria-hidden="true">
+<i id="progBar" style="width: 0%;"></i>
+</div>
+</div>
+<div class="qbox card" id="quizArea" style="margin-top:8px"></div>
+<div class="result" id="resultBox">
+<div class="card">
+<div class="score" id="scoreText"></div>
+<div id="passText" style="margin-top:6px"></div>
+<div class="review" id="reviewList"></div>
+</div>
+</div>
+<footer>Quiz loaded in memory. Reload the page to reshuffle questions.</footer>
+</div>
+</div>
+
+<script>
+const TOTAL_QUESTIONS = 30;
+const PASS_RATE = 0.8;
+const REQUIRED_SCORE = TOTAL_QUESTIONS * PASS_RATE;
+const TIME_PER_QUESTION = 60; // seconds
+const TOTAL_QUIZ_TIME = 30 * 60; // 30 minutes in seconds
+
+let individualTimerInterval;
+let overallTimerInterval;
+let overallTimeRemaining = TOTAL_QUIZ_TIME;
+
+
+const QUESTION_BANK = [
+
+{q:'What is the first step in problem solving?',choices:['Propose solutions','Define the problem','Test the solution','Develop the algorithm'],a:1},
+{q:'A problem definition must be:',choices:['Long and detailed','Ambiguous','Clear and concise','Written by a programmer'],a:2},
+{q:'Which example is used to show problem definition?',choices:['Calculating discount','Converting °C to °F','Reading item price','Writing pseudocode'],a:1},
+{q:'In step 2, problems are analyzed as a sequence of:',choices:['Random commands','Graphics','Instructions','Notes'],a:2},
+{q:'Which of the following is NOT one of the three parts of analyzing a problem?',choices:['Input and storage','Processing','Output','Debugging'],a:3},
+{q:'Words like ENTER or READ indicate:',choices:['Output','Input','Processing','Testing'],a:1},
+{q:'True or False: Processing instructions involve mathematical operations.',choices:['True','False'],a:0},
+{q:'Commands are:',choices:['Groups of instructions','Words that tell the computer what to do','Symbols used for storage','Used only in loops'],a:1},
+{q:'Constructs are:',choices:['Single commands','Groups of instructions working together','Input devices','Output formats'],a:1},
+{q:'Calculating the price after a discount is an example of:',choices:['Input instruction','Processing instruction','Output instruction','Testing'],a:1},
+{q:'Comparison/selection statements determine whether:',choices:['Variables are stored','Data is printed','A condition is true or false','Loops should stop'],a:2},
+{q:'Repeat statements are used to:',choices:['Stop code','Repeat code','Write output','Erase instructions'],a:1},
+{q:'Which keywords indicate output instructions?',choices:['READ, ENTER, INPUT','PRINT, DISPLAY, WRITE','IF, THEN, ELSE','REPEAT, LOOP'],a:1},
+{q:'Step 3 of problem solving is to:',choices:['Develop the algorithm','Determine the most efficient solution','Input data','Test the program'],a:1},
+{q:'True or False: Efficiency is considered after developing the algorithm.',choices:['True','False'],a:1},
+{q:'Step 4 involves developing and representing:',choices:['Hardware','Algorithm','Output only','Trace table'],a:1},
+{q:'Which of the following is NOT considered when developing an algorithm?',choices:['Constants','Variables','Writing instructions','Keyboard size'],a:3},
+{q:'Algorithms can be represented using:',choices:['Flowcharts and pseudocode','Images only','Videos','HTML'],a:0},
+{q:'The last step in problem solving is:',choices:['Input','Testing and validating','Proposing solutions','Storing data'],a:1},
+{q:'Manual testing is also called:',choices:['Executing','Dry-running','Compiling','Looping'],a:1},
+{q:'Dry-running helps detect:',choices:['Syntax errors','Logic errors','Hardware faults','Output instructions'],a:1},
+{q:'A trace table records:',choices:['System errors','Variable values during execution','Computer speed','Power usage'],a:1},
+{q:'True or False: A trace table includes a column for OUTPUT.',choices:['True','False'],a:0},
+{q:'The first action in creating a trace table is to:',choices:['Write the program','Write all variables as headings','Draw a flowchart','Store data'],a:1},
+{q:'Input instructions allow the computer to:',choices:['Display information','Accept data','Repeat instructions','Select conditions'],a:1},
+{q:'Processing instructions include:',choices:['PRINT statements','Entering data','Mathematical operations','Defining variable names'],a:2},
+{q:'Output instructions show:',choices:['Stored values','Displayed information','Repeated data','Ignored values'],a:1},
+{q:'True or False: PRINT and OUTPUT are examples of output keywords.',choices:['True','False'],a:0},
+{q:'A solution is chosen in which step?',choices:['Step 1','Step 2','Step 3','Step 5'],a:2},
+{q:'Defining the problem requires:',choices:['Ambiguity','One clear meaning','Multiple interpretations','Random ideas'],a:1},
+{q:'Which part divides the problem into input, processing, and output?',choices:['Problem definition','Evaluating solutions','Algorithm development','Testing'],a:1},
+{q:'True or False: Commands and constructs are types of processing instructions.',choices:['True','False'],a:0},
+{q:'Repeat statements are sometimes called:',choices:['Loops','Outputs','Conditions','Errors'],a:0},
+{q:'Which step involves constants, variables, and comparisons?',choices:['Defining the problem','Developing the algorithm','Testing','Selecting a solution'],a:1},
+{q:'Dry-running uses:',choices:['Actual machines','Manual execution','Memory dumps','Real sensors'],a:1},
+{q:'Trace tables help in finding:',choices:['Logical flow','Storage capacity','Screen resolution','File names'],a:0},
+{q:'The problem must have:',choices:['One meaning','Many meanings','Several interpretations','No definition'],a:0},
+{q:'True or False: A pseudocode is a type of algorithm representation.',choices:['True','False'],a:0},
+{q:'Which is an example of an input keyword?',choices:['PRINT','DISPLAY','READ','RETURN'],a:2},
+{q:'What does a comparison statement check?',choices:['Input size','Condition truth','Screen output','Loop count'],a:1},
+{q:'Loops are used when:',choices:['A condition must be selected','A task must repeat','Data must be printed','Variables must be stored'],a:1},
+{q:'Which is part of analyzing the problem?',choices:['Calculating tax','Processing instructions','Writing pseudocode','Testing'],a:1},
+{q:'Output occurs:',choices:['Before input','After processing','Only during testing','Only with loops'],a:1},
+{q:'True or False: Dry-running uses test input values.',choices:['True','False'],a:0},
+{q:'Which step involves selecting the best solution?',choices:['Defining the problem','Evaluating solutions','Determining efficiency','Testing'],a:2},
+{q:'Commands instruct the computer:',choices:['What must be done','Where data is stored','How to draw charts','How to test'],a:0},
+{q:'Constructs work together to:',choices:['Erase data','Accomplish tasks','Display results','Test code'],a:1},
+{q:'Output keywords tell the computer to:',choices:['Accept input','Display information','Compare values','Repeat actions'],a:1},
+{q:'The purpose of testing is to:',choices:['Find logic errors','Enter data','Write constructs','Create variables'],a:0},
+
+{q:'Which step ensures the problem has only one meaning?',choices:['Testing','Proposing solutions','Defining the problem','Writing pseudocode'],a:2},
+{q:'True or False: Input instructions tell the computer what results to display.',choices:['True','False'],a:1},
+{q:'Which type of instruction uses mathematical operations?',choices:['Input','Output','Processing','Testing'],a:2},
+{q:'The instruction PRINT belongs to which category?',choices:['Input','Processing','Output','Loop'],a:2},
+{q:'True or False: The step of proposing solutions includes dividing the problem into input, processing, and output.',choices:['True','False'],a:0},
+{q:'Which instruction keyword usually signals input?',choices:['WRITE','ENTER','DISPLAY','PRINT'],a:1},
+{q:'The programmer chooses the best solution in:',choices:['Step 3','Step 1','Step 5','Step 4'],a:0},
+{q:'Testing is used to find:',choices:['Syntax errors','Logic errors','Hardware issues','Memory leaks'],a:1},
+{q:'True or False: Dry-running uses a trace table to check program flow.',choices:['True','False'],a:0},
+{q:'A trace table contains:',choices:['Only output','Only input','Variable headings','Graphics'],a:2},
+{q:'Which step includes writing the algorithm?',choices:['Step 4','Step 3','Step 1','Step 2'],a:0},
+{q:'In which step do you identify constants and variables?',choices:['Testing','Defining the problem','Developing the algorithm','Comparing solutions'],a:2},
+{q:'True or False: Pseudocode is written in a programming language.',choices:['True','False'],a:1},
+{q:'What is the purpose of output instructions?',choices:['Store data','Display information','Repeat steps','Test solutions'],a:1},
+{q:'Which instruction involves selecting between options?',choices:['Looping','Decision/selection','Output','Input'],a:1},
+{q:'True or False: Construct is another word for command.',choices:['True','False'],a:1},
+{q:'When analyzing a task, you divide it into:',choices:['Two parts','Five parts','Three parts','Six parts'],a:2},
+{q:'Which of the following is an example of a processing command?',choices:['PRINT total','READ number','CALCULATE sum','DISPLAY output'],a:2},
+{q:'Looping is used when:',choices:['A condition must repeat','Values must be displayed','Data is entered','Steps must end'],a:0},
+{q:'True or False: Step 2 evaluates different possible solutions.',choices:['True','False'],a:0},
+{q:'In step 3, the programmer considers:',choices:['Programming languages','Efficiency','Computer memory','Screen size'],a:1},
+{q:'Which type of testing occurs without using a computer?',choices:['Automatic testing','Dry-running','Machine testing','Input testing'],a:1},
+{q:'A good problem definition avoids:',choices:['Clarity','Multiple meanings','Accuracy','Conciseness'],a:1},
+{q:'True or False: PRINT and DISPLAY indicate input.',choices:['True','False'],a:1},
+{q:'Selecting the best solution is based on:',choices:['Speed only','Variables to be considered','Color of output','Size of the computer'],a:1},
+{q:'Which instruction shows results on the screen?',choices:['READ','CALCULATE','PRINT','COMPARE'],a:2},
+{q:'True or False: A loop will always run only once.',choices:['True','False'],a:1},
+{q:'To check if a condition is true or false, you use:',choices:['Output statements','Decision statements','Looping statements','Input statements'],a:1},
+{q:'Step 5 ensures the algorithm:',choices:['Looks neat on paper','Runs correctly','Contains no variables','Has maximum input'],a:1},
+{q:'True or False: Variables are ignored during algorithm creation.',choices:['True','False'],a:1},
+{q:'One purpose of a trace table is to:',choices:['Store data permanently','Track variable changes','Print the program','Select output devices'],a:1},
+{q:'The problem-solving step where you identify processing instructions is:',choices:['Step 1','Step 2','Step 5','Step 3'],a:1},
+{q:'Which of the following is NOT an output keyword?',choices:['WRITE','RETURN','DISPLAY','READ'],a:3},
+{q:'True or False: Dry-running helps identify logic errors before running the program.',choices:['True','False'],a:0},
+{q:'Constructs work together with:',choices:['Output commands','Input commands','Decision commands','Commands'],a:3},
+{q:'During step 4, programmers must also consider:',choices:['Fonts','Constants','Keyboard layout','Speakers'],a:1},
+{q:'The main purpose of Step 1 is to:',choices:['Test solutions','Understand the problem clearly','Draw flowcharts','Select variables'],a:1},
+{q:'True or False: Algorithms can only be shown using flowcharts.',choices:['True','False'],a:1},
+{q:'Which step ensures the algorithm does what it was designed to do?',choices:['Step 3','Step 2','Step 5','Step 1'],a:2},
+{q:'In a trace table, OUTPUT represents:',choices:['What is printed','What is repeated','What is stored','What is compared'],a:0}
+
+];
+
+
+let quizQuestions = [];
+let currentQ = 0;
+let answers = [];
+let quizSubmitted = false;
+
+
+function shuffleArray(arr){
+  for(let i=arr.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]]
+  }
+}
+
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function startOverallTimer() {
+  clearInterval(overallTimerInterval);
+  const timerBox = document.querySelector('.overall-timer-box');
+  const display = document.getElementById('overallTimerDisplay');
+  
+  overallTimerInterval = setInterval(() => {
+    overallTimeRemaining--;
+    display.innerText = formatTime(overallTimeRemaining);
+
+    if (overallTimeRemaining <= 300) { // 5 minutes remaining
+      timerBox.classList.add('critical');
+    }
+
+    if (overallTimeRemaining <= 0) {
+      clearInterval(overallTimerInterval);
+      alert("Time's up! The quiz will now be submitted.");
+      // Force submit the quiz
+      submitQ();
+    }
+  }, 1000);
+}
+
+
+function loadQuiz(){
+  // Stop any running timers
+  clearInterval(individualTimerInterval);
+  clearInterval(overallTimerInterval);
+  overallTimeRemaining = TOTAL_QUIZ_TIME;
+
+  // Deep copy and shuffle the question bank
+  let shuffledBank = QUESTION_BANK.map(q => ({...q}));
+  shuffleArray(shuffledBank);
+  
+  // Select 30 unique questions and shuffle their choices
+  quizQuestions = shuffledBank.slice(0, TOTAL_QUESTIONS);
+  quizQuestions.forEach(q => {
+    const correctText = q.choices[q.a];
+    shuffleArray(q.choices);
+    q.a = q.choices.indexOf(correctText); // Update the correct index after shuffle
+  });
+
+  currentQ=0;
+  answers = new Array(TOTAL_QUESTIONS).fill(undefined);
+  quizSubmitted = false;
+  
+  document.getElementById('overallTimerDisplay').innerText = formatTime(TOTAL_QUIZ_TIME);
+  document.querySelector('.overall-timer-box').classList.remove('critical');
+
+  startOverallTimer();
+  showQuestion();
+  document.getElementById('quizArea').style.display='block';
+  document.getElementById('resultBox').classList.remove('show');
+}
+
+function startIndividualTimer() {
+  clearInterval(individualTimerInterval);
+  let timeRemaining = TIME_PER_QUESTION;
+  const timerDisplay = document.getElementById('timerDisplay');
+  timerDisplay.innerText = formatTime(timeRemaining);
+  timerDisplay.classList.remove('warn');
+
+  individualTimerInterval = setInterval(() => {
+    timeRemaining--;
+    timerDisplay.innerText = formatTime(timeRemaining);
+
+    if (timeRemaining <= 10) {
+      timerDisplay.classList.add('warn');
+    }
+
+    if (timeRemaining <= 0) {
+      clearInterval(individualTimerInterval);
+      
+      // Time out, move to next question/submit
+      if (currentQ < TOTAL_QUESTIONS - 1) {
+        nextQ();
+      } else {
+        // If the overall timer hasn't expired yet, submit the quiz
+        if (!quizSubmitted) submitQ();
+      }
+    }
+  }, 1000);
+}
+
+function showQuestion(){
+  if (quizSubmitted) return;
+  
+  // Stop individual timer from previous question
+  clearInterval(individualTimerInterval);
+
+  const q=quizQuestions[currentQ];
+  const area=document.getElementById('quizArea');
+  const userAnswer = answers[currentQ];
+
+// FIX APPLIED HERE: Added <br> tag to force a line break in the question text.
+  let html='<div class="question-header"><div class="question">Question '+(currentQ+1)+' of '+TOTAL_QUESTIONS+': <br>'+q.q+'</div><div id="timerDisplay" class="timer"></div></div><div class="choices">';
+  
+  // Generate choices
+  q.choices.forEach((c,i)=>{
+    const isChecked = userAnswer === i ? 'checked' : '';
+    // Attach change listener for immediate saving
+    html+='<label class="choice" tabindex="0"><input type="radio" name="choice" value="'+i+'" '+isChecked+' onchange="saveAnswer('+i+')"><span>'+c+'</span></label>'
+  });
+  html+='</div>';
+
+  // Generate controls
+  const nextButtonText = currentQ === TOTAL_QUESTIONS - 1 ? 'Submit Quiz' : 'Next Question';
+  const nextButtonAction = currentQ === TOTAL_QUESTIONS - 1 ? 'submitQ()' : 'nextQ()';
+
+  html+='<div class="controls">';
+  html+='<div><button onclick="prevQ()" '+(currentQ===0?'disabled':'')+'>← Previous</button></div>';
+  html+='<div class="muted">Time limit: '+TIME_PER_QUESTION+' seconds per question.</div>';
+  html+='<div><button onclick="'+nextButtonAction+'">'+nextButtonText+'</button></div>';
+  html+='</div>';
+
+  area.innerHTML=html;
+  updateProgress();
+  startIndividualTimer(); // Start the individual timer for the new question
+}
+
+window.saveAnswer = function(choiceIndex) {
+  if (!quizSubmitted) {
+    answers[currentQ] = choiceIndex;
+  }
+}
+
+window.prevQ = function(){
+  if(currentQ>0){
+    currentQ--;
+    showQuestion();
+  }
+}
+
+window.nextQ = function(){
+  // Stop the individual timer before advancing
+  clearInterval(individualTimerInterval);
+
+  if(currentQ < TOTAL_QUESTIONS - 1){
+    currentQ++;
+    showQuestion();
+  }
+}
+
+window.submitQ = function(){
+  if (quizSubmitted) return; 
+  
+  // Stop all timers when quiz is submitted
+  clearInterval(individualTimerInterval);
+  clearInterval(overallTimerInterval);
+
+  quizSubmitted = true;
+  let score=0;
+  const review=document.getElementById('reviewList');
+  review.innerHTML='';
+  
+  // Calculate Score and build review list
+  quizQuestions.forEach((q,i)=>{
+    const correct=q.a;
+    const user=answers[i];
+    const isAnswered = user !== undefined;
+    const isCorrect = isAnswered && user===correct;
+
+    if(isCorrect) score++;
+
+    let rItem='<div class="rev-item"><div><strong>Q'+(i+1)+':</strong> '+q.q+'</div><div style="margin-top:8px;">';
+    
+    q.choices.forEach((c,j)=>{
+      let style='padding:6px 8px;border-radius:6px;margin-bottom:6px;';
+      if(j===correct) {
+        style+='background:rgb(236,250,239);border:1px solid rgba(16,185,129,0.12);'; // Correct Answer Highlight
+      } else if(j===user && j!==correct) {
+        style+='background:rgb(255,241,242);border:1px solid rgba(220,38,38,0.08);'; // User's Wrong Answer Highlight
+      }
+      rItem+='<div style="'+style+'">'+c+'</div>'
+    });
+    
+    rItem+='</div>';
+
+    // Status Badge
+    let badgeHtml;
+    if (isCorrect) {
+      badgeHtml = '<span class="correct-badge">Correct</span>';
+    } else if (isAnswered) {
+      badgeHtml = '<span class="wrong-badge">Wrong</span> Correct answer highlighted above.';
+    } else {
+      // Check if the time ran out or they just missed it
+      badgeHtml = '<span class="unanswered-badge">Unanswered</span> Correct answer highlighted above.';
+    }
+
+    rItem+='<div style="margin-top:6px;">'+badgeHtml+'</div></div>';
+    review.innerHTML+=rItem
+  });
+
+  // Display results
+  document.getElementById('scoreText').innerText='Score: '+score+' / '+TOTAL_QUESTIONS+' ('+((score/TOTAL_QUESTIONS*100).toFixed(2))+'%)';
+  const passText=document.getElementById('passText');
+  
+  if(score>=REQUIRED_SCORE){
+    passText.innerHTML='<span class="pass">Passed ✓</span> — You needed '+REQUIRED_SCORE+' correct to pass.'
+  }else{
+    passText.innerHTML='<span class="fail">Failed ✗</span> — You needed '+REQUIRED_SCORE+' correct to pass.'
+  }
+  
+  document.getElementById('resultBox').classList.add('show');
+  document.getElementById('quizArea').style.display='none';
+}
+
+
+function updateProgress(){
+  document.getElementById('progBar').style.width=((currentQ+1)/TOTAL_QUESTIONS*100)+'%';
+}
+
+
+// Initialize the quiz when the script loads
+loadQuiz();
+</script>
+</body>
+</html>

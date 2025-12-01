@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiple Choice Quiz — 30 Random Questions (80% pass)</title>
+<style>
+:root{--bg:#f4f7fb;--card:#ffffff;--accent:#2563eb;--muted:#6b7280;--success:#16a34a;--fail:#dc2626; --return-btn-bg:#e5e7eb; --return-btn-color:#1f2937; --timer-warn:#f59e0b; --overall-timer-bg:#fef3c7; --overall-timer-color:#d97706;}
+*{box-sizing:border-box}
+body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); margin:0; color:#111}
+.wrap{max-width:900px;margin:36px auto;padding:22px}
+.card{background:var(--card);border-radius:14px;padding:22px;box-shadow:0 6px 20px rgba(16,24,40,0.06)}
+/* Updated header to use flex for button alignment */
+header{display: flex; justify-content: space-between; align-items: flex-start;}
+header h1{margin:0;font-size:20px}
+header p{margin:6px 0 0;color:var(--muted);font-size:13px}
+
+/* New: Overall Timer Box */
+.overall-timer-box{
+  background: var(--overall-timer-bg);
+  color: var(--overall-timer-color);
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  margin-top: 10px;
+  text-align: center;
+  border: 1px solid #fcd34d;
+}
+.overall-timer-box.critical{
+  background: #fef2f2;
+  color: var(--fail);
+  border-color: var(--fail);
+}
+
+
+.meta{display:flex;gap:12px;align-items:center;margin-top:16px}
+.meta .pill{background:#eef2ff;color:var(--accent);padding:6px 10px;border-radius:999px;font-weight:600;font-size:13px}
+.progress-wrap{margin:18px 0}
+.progress{height:10px;background:#e6eefc;border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7c3aed);width:0%}
+.qbox{margin-top:18px}
+.question-header{
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 12px;
+    /* FIX: Allow content to wrap */
+    flex-wrap: wrap; 
+}
+.question{
+    font-weight:600; 
+    margin: 0;
+    /* FIX: Force this element to take full width when using <br> */
+    width: 100%;
+    margin-bottom: 10px;
+}
+.timer{font-weight: 700; color: var(--accent); font-size: 16px; padding: 4px 8px; border-radius: 6px; border: 1px solid #eef2ff;}
+.timer.warn{color: var(--fail); border-color: var(--fail);}
+.choices{display:grid;gap:10px}
+.choice{background:#fbfdff;border:1px solid #eef3ff;padding:12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:12px; transition: border-color 0.2s;}
+.choice:hover{border-color:var(--accent);}
+.choice input{accent-color:var(--accent)}
+.controls{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:18px}
+button{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer; transition: background-color 0.2s;}
+button:hover:not([disabled]){background:#1d4ed8;}
+button[disabled]{opacity:.5;cursor:default}
+.muted{color:var(--muted);font-size:14px}
+
+/* Return Button Style */
+#returnBtn{
+  background: var(--return-btn-bg);
+  color: var(--return-btn-color);
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-left: 20px;
+  align-self: center;
+  border: 1px solid #d1d5db;
+}
+#returnBtn:hover{
+  background: #d1d5db;
+}
+
+.result{display:none;margin-top:18px}
+.result.show{display:block}
+.score{font-size:20px;font-weight:700}
+.pass{color:var(--success)}
+.fail{color:var(--fail)}
+.review{margin-top:16px}
+.review .rev-item{padding:12px;border-radius:8px;border:1px solid #eef2ff;margin-bottom:10px;background:#fff}
+.correct-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#ecfaef;color:var(--success);font-weight:700;margin-left:10px}
+.wrong-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fff1f2;color:var(--fail);font-weight:700;margin-left:10px}
+.unanswered-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fefce8;color:#a16207;font-weight:700;margin-left:10px}
+
+
+footer{margin-top:22px;text-align:center;color:var(--muted);font-size:13px}
+@media (max-width:600px){
+  .wrap{padding:12px}
+  header { flex-direction: column; align-items: flex-start; }
+  #returnBtn { margin-left: 0; margin-top: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<header>
+  <div>
+    <h1>Multiple Choice Quiz — 30 Random Questions</h1>
+    <p>Pass rate: <strong>80%</strong> (24/30). Questions are randomly selected each time you load the page.</p>
+  </div>
+<a href="blended_it.html">
+    <button id="returnBtn">
+        ← Return to main page
+    </button>
+</a>
+
+</header>
+<div class="overall-timer-box">
+  Time Remaining for Quiz: <span id="overallTimerDisplay">30:00</span>
+</div>
+<div class="meta">
+<div class="pill">30 questions</div>
+<div class="muted">60 seconds per question limit, 30 minutes overall limit.</div>
+</div>
+<div class="progress-wrap">
+<div class="progress" aria-hidden="true">
+<i id="progBar" style="width: 0%;"></i>
+</div>
+</div>
+<div class="qbox card" id="quizArea" style="margin-top:8px"></div>
+<div class="result" id="resultBox">
+<div class="card">
+<div class="score" id="scoreText"></div>
+<div id="passText" style="margin-top:6px"></div>
+<div class="review" id="reviewList"></div>
+</div>
+</div>
+<footer>Quiz loaded in memory. Reload the page to reshuffle questions.</footer>
+</div>
+</div>
+
+<script>
+const TOTAL_QUESTIONS = 30;
+const PASS_RATE = 0.8;
+const REQUIRED_SCORE = TOTAL_QUESTIONS * PASS_RATE;
+const TIME_PER_QUESTION = 60; // seconds
+const TOTAL_QUIZ_TIME = 30 * 60; // 30 minutes in seconds
+
+let individualTimerInterval;
+let overallTimerInterval;
+let overallTimeRemaining = TOTAL_QUIZ_TIME;
+
+
+const QUESTION_BANK = [
+
+{q:'What is the main purpose of decomposition in problem-solving?', choices:['To write code faster','To break a large problem into smaller parts','To increase program size','To reduce the number of programmers needed'], a:1},
+{q:'Why do software systems become more complex over time?', choices:['Developers prefer complicated designs','Technology gets worse','Problems require larger and more complex solutions','Users dislike simple systems'], a:2},
+{q:'What is a subsystem within a larger system?', choices:['A complete unrelated system','A smaller part created by decomposing the main system','A hardware device','A type of operating system'], a:1},
+{q:'Why is decomposition necessary?', choices:['Humans cannot understand very large problems at once','It makes problems harder','It prevents teamwork','It removes the need for planning'], a:0},
+{q:'Which term describes smaller parts created during decomposition?', choices:['Variables','Loops','Modules','Objects'], a:2},
+{q:'What is one difficulty in dividing a problem into sub-problems?', choices:['Programming languages don’t support it','We don’t know if the sub-problems will be easier to solve','It always requires advanced math','Users dislike decomposed systems'], a:1},
+{q:'Another difficulty in decomposition is:', choices:['Knowing if the sub-problems fit back together to recreate the original problem','It increases typing','It always makes systems slower','It removes creativity'], a:0},
+{q:'What helps a developer identify meaningful sub-problems?', choices:['Luck','Prior knowledge and experience','Random guessing','Copying old code'], a:1},
+{q:'Where do the problems that developers try to solve usually come from?', choices:['Inside the computer','From users in the real world','From textbooks','From programmers themselves'], a:1},
+{q:'Why do many software projects fail?', choices:['Poor coding skills','Lack of hardware','Mistakes made early in the design stage','Too many programmers'], a:2},
+{q:'What should developers focus on the most?', choices:['Understanding user problems','Writing code as fast as possible','Making long programs','Ignoring user requirements'], a:0},
+{q:'What connects the software solution to the real-world problem?', choices:['The keyboard','The coding language','The link between the system and the outside world','The colour of the interface'], a:2},
+{q:'Decomposition means breaking a large problem into smaller, manageable parts.', choices:['True','False'], a:0},
+{q:'Humans can easily understand any complex system without breaking it down.', choices:['True','False'], a:1},
+{q:'Modules are the smaller subsystems created during decomposition.', choices:['True','False'], a:0},
+{q:'Decomposition always guarantees that sub-problems will be easy to solve.', choices:['True','False'], a:1},
+{q:'A major challenge is ensuring that all sub-problems combine to form the original solution.', choices:['True','False'], a:0},
+{q:'Developers usually deal with problems that exist outside of the computer system.', choices:['True','False'], a:0},
+{q:'Poor coding is the main reason software projects fail.', choices:['True','False'], a:1},
+{q:'Experience helps developers recognise useful sub-problems.', choices:['True','False'], a:0},
+{q:'Developers should focus more on understanding user problems than on code.', choices:['True','False'], a:0},
+{q:'Complex systems do not need to be decomposed.', choices:['True','False'], a:1},
+{q:'What does IPO stand for in problem solving?', choices:['Input, Program, Output','Input, Process, Output','Insert, Process, Operate','Information, Production, Outcome'], a:1},
+{q:'What is the purpose of an IPO chart?', choices:['To identify variables only','To organize input, processing, and output clearly','To test a program','To replace algorithms'], a:1},
+{q:'In an IPO chart, “Input” refers to:', choices:['What the program displays','Data needed to solve the problem','Steps taken to calculate answers','Errors found in the program'], a:1},
+{q:'The “Process” section describes:', choices:['What data is printed','What calculations or actions happen','How the user feels','What hardware is needed'], a:1},
+{q:'The “Output” is:', choices:['The result the program should produce','The raw data entered','The programming language used','The number of loops'], a:0},
+{q:'Which of these is an example of input in an IPO chart?', choices:['Displaying a total','Adding numbers','A user entering a grade','Printing the answer'], a:2},
+{q:'Which belongs under processing?', choices:['Enter number','Print total','Calculate average','Type name'], a:2},
+{q:'Which statement best describes an IPO chart?', choices:['A debugging tool','A planning tool for understanding a problem','A type of loop','A replacement for pseudocode'], a:1},
+{q:'In adding three numbers, the output is:', choices:['The three numbers themselves','The sum of the numbers','The input values only','The algorithm steps'], a:1},
+{q:'Why are IPO charts useful before writing a program?', choices:['They eliminate the need for coding','They help structure the problem clearly','They automatically generate code','They test for logic errors'], a:1},
+{q:'What is the first step when creating an IPO chart?', choices:['Listing outputs','Listing processes','Identifying the problem statement','Testing the algorithm'], a:2},
+{q:'Saving the sum of three numbers as a single result belongs to which IPO category?', choices:['Input','Processing','Output','Storage only'], a:1},
+{q:'Which of the following would NOT be an output?', choices:['Final score','Printed message','Calculated total','User input'], a:3},
+{q:'Which tool is usually created AFTER an IPO chart is completed?', choices:['Flowchart','Keyboard layout','Monitor settings','RAM table'], a:0},
+{q:'An IPO chart helps programmers to:', choices:['Memorize programming languages','Break problems into clear parts','Avoid writing pseudocode','Increase computer speed'], a:1},
+{q:'IPO charts help identify what information goes into and comes out of a program.', choices:['True','False'], a:0},
+{q:'Processing in an IPO chart describes the calculations needed.', choices:['True','False'], a:0},
+{q:'Inputs are always numbers.', choices:['True','False'], a:1},
+{q:'The output of a program is always text.', choices:['True','False'], a:1},
+{q:'IPO charts come after writing the algorithm.', choices:['True','False'], a:1},
+{q:'An IPO chart can help prevent misunderstanding of a problem.', choices:['True','False'], a:0},
+{q:'In an IPO chart, printing a result is an example of processing.', choices:['True','False'], a:1},
+{q:'IPO charts do not help with organizing thoughts before coding.', choices:['True','False'], a:1},
+{q:'Identifying inputs is the first step in creating an IPO chart.', choices:['True','False'], a:0},
+{q:'Processing includes both calculations and logical steps.', choices:['True','False'], a:0},
+
+
+];
+
+
+let quizQuestions = [];
+let currentQ = 0;
+let answers = [];
+let quizSubmitted = false;
+
+
+function shuffleArray(arr){
+  for(let i=arr.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]]
+  }
+}
+
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function startOverallTimer() {
+  clearInterval(overallTimerInterval);
+  const timerBox = document.querySelector('.overall-timer-box');
+  const display = document.getElementById('overallTimerDisplay');
+  
+  overallTimerInterval = setInterval(() => {
+    overallTimeRemaining--;
+    display.innerText = formatTime(overallTimeRemaining);
+
+    if (overallTimeRemaining <= 300) { // 5 minutes remaining
+      timerBox.classList.add('critical');
+    }
+
+    if (overallTimeRemaining <= 0) {
+      clearInterval(overallTimerInterval);
+      alert("Time's up! The quiz will now be submitted.");
+      // Force submit the quiz
+      submitQ();
+    }
+  }, 1000);
+}
+
+
+function loadQuiz(){
+  // Stop any running timers
+  clearInterval(individualTimerInterval);
+  clearInterval(overallTimerInterval);
+  overallTimeRemaining = TOTAL_QUIZ_TIME;
+
+  // Deep copy and shuffle the question bank
+  let shuffledBank = QUESTION_BANK.map(q => ({...q}));
+  shuffleArray(shuffledBank);
+  
+  // Select 30 unique questions and shuffle their choices
+  quizQuestions = shuffledBank.slice(0, TOTAL_QUESTIONS);
+  quizQuestions.forEach(q => {
+    const correctText = q.choices[q.a];
+    shuffleArray(q.choices);
+    q.a = q.choices.indexOf(correctText); // Update the correct index after shuffle
+  });
+
+  currentQ=0;
+  answers = new Array(TOTAL_QUESTIONS).fill(undefined);
+  quizSubmitted = false;
+  
+  document.getElementById('overallTimerDisplay').innerText = formatTime(TOTAL_QUIZ_TIME);
+  document.querySelector('.overall-timer-box').classList.remove('critical');
+
+  startOverallTimer();
+  showQuestion();
+  document.getElementById('quizArea').style.display='block';
+  document.getElementById('resultBox').classList.remove('show');
+}
+
+function startIndividualTimer() {
+  clearInterval(individualTimerInterval);
+  let timeRemaining = TIME_PER_QUESTION;
+  const timerDisplay = document.getElementById('timerDisplay');
+  timerDisplay.innerText = formatTime(timeRemaining);
+  timerDisplay.classList.remove('warn');
+
+  individualTimerInterval = setInterval(() => {
+    timeRemaining--;
+    timerDisplay.innerText = formatTime(timeRemaining);
+
+    if (timeRemaining <= 10) {
+      timerDisplay.classList.add('warn');
+    }
+
+    if (timeRemaining <= 0) {
+      clearInterval(individualTimerInterval);
+      
+      // Time out, move to next question/submit
+      if (currentQ < TOTAL_QUESTIONS - 1) {
+        nextQ();
+      } else {
+        // If the overall timer hasn't expired yet, submit the quiz
+        if (!quizSubmitted) submitQ();
+      }
+    }
+  }, 1000);
+}
+
+function showQuestion(){
+  if (quizSubmitted) return;
+  
+  // Stop individual timer from previous question
+  clearInterval(individualTimerInterval);
+
+  const q=quizQuestions[currentQ];
+  const area=document.getElementById('quizArea');
+  const userAnswer = answers[currentQ];
+
+// FIX APPLIED HERE: Added <br> tag to force a line break in the question text.
+  let html='<div class="question-header"><div class="question">Question '+(currentQ+1)+' of '+TOTAL_QUESTIONS+': <br>'+q.q+'</div><div id="timerDisplay" class="timer"></div></div><div class="choices">';
+  
+  // Generate choices
+  q.choices.forEach((c,i)=>{
+    const isChecked = userAnswer === i ? 'checked' : '';
+    // Attach change listener for immediate saving
+    html+='<label class="choice" tabindex="0"><input type="radio" name="choice" value="'+i+'" '+isChecked+' onchange="saveAnswer('+i+')"><span>'+c+'</span></label>'
+  });
+  html+='</div>';
+
+  // Generate controls
+  const nextButtonText = currentQ === TOTAL_QUESTIONS - 1 ? 'Submit Quiz' : 'Next Question';
+  const nextButtonAction = currentQ === TOTAL_QUESTIONS - 1 ? 'submitQ()' : 'nextQ()';
+
+  html+='<div class="controls">';
+  html+='<div><button onclick="prevQ()" '+(currentQ===0?'disabled':'')+'>← Previous</button></div>';
+  html+='<div class="muted">Time limit: '+TIME_PER_QUESTION+' seconds per question.</div>';
+  html+='<div><button onclick="'+nextButtonAction+'">'+nextButtonText+'</button></div>';
+  html+='</div>';
+
+  area.innerHTML=html;
+  updateProgress();
+  startIndividualTimer(); // Start the individual timer for the new question
+}
+
+window.saveAnswer = function(choiceIndex) {
+  if (!quizSubmitted) {
+    answers[currentQ] = choiceIndex;
+  }
+}
+
+window.prevQ = function(){
+  if(currentQ>0){
+    currentQ--;
+    showQuestion();
+  }
+}
+
+window.nextQ = function(){
+  // Stop the individual timer before advancing
+  clearInterval(individualTimerInterval);
+
+  if(currentQ < TOTAL_QUESTIONS - 1){
+    currentQ++;
+    showQuestion();
+  }
+}
+
+window.submitQ = function(){
+  if (quizSubmitted) return; 
+  
+  // Stop all timers when quiz is submitted
+  clearInterval(individualTimerInterval);
+  clearInterval(overallTimerInterval);
+
+  quizSubmitted = true;
+  let score=0;
+  const review=document.getElementById('reviewList');
+  review.innerHTML='';
+  
+  // Calculate Score and build review list
+  quizQuestions.forEach((q,i)=>{
+    const correct=q.a;
+    const user=answers[i];
+    const isAnswered = user !== undefined;
+    const isCorrect = isAnswered && user===correct;
+
+    if(isCorrect) score++;
+
+    let rItem='<div class="rev-item"><div><strong>Q'+(i+1)+':</strong> '+q.q+'</div><div style="margin-top:8px;">';
+    
+    q.choices.forEach((c,j)=>{
+      let style='padding:6px 8px;border-radius:6px;margin-bottom:6px;';
+      if(j===correct) {
+        style+='background:rgb(236,250,239);border:1px solid rgba(16,185,129,0.12);'; // Correct Answer Highlight
+      } else if(j===user && j!==correct) {
+        style+='background:rgb(255,241,242);border:1px solid rgba(220,38,38,0.08);'; // User's Wrong Answer Highlight
+      }
+      rItem+='<div style="'+style+'">'+c+'</div>'
+    });
+    
+    rItem+='</div>';
+
+    // Status Badge
+    let badgeHtml;
+    if (isCorrect) {
+      badgeHtml = '<span class="correct-badge">Correct</span>';
+    } else if (isAnswered) {
+      badgeHtml = '<span class="wrong-badge">Wrong</span> Correct answer highlighted above.';
+    } else {
+      // Check if the time ran out or they just missed it
+      badgeHtml = '<span class="unanswered-badge">Unanswered</span> Correct answer highlighted above.';
+    }
+
+    rItem+='<div style="margin-top:6px;">'+badgeHtml+'</div></div>';
+    review.innerHTML+=rItem
+  });
+
+  // Display results
+  document.getElementById('scoreText').innerText='Score: '+score+' / '+TOTAL_QUESTIONS+' ('+((score/TOTAL_QUESTIONS*100).toFixed(2))+'%)';
+  const passText=document.getElementById('passText');
+  
+  if(score>=REQUIRED_SCORE){
+    passText.innerHTML='<span class="pass">Passed ✓</span> — You needed '+REQUIRED_SCORE+' correct to pass.'
+  }else{
+    passText.innerHTML='<span class="fail">Failed ✗</span> — You needed '+REQUIRED_SCORE+' correct to pass.'
+  }
+  
+  document.getElementById('resultBox').classList.add('show');
+  document.getElementById('quizArea').style.display='none';
+}
+
+
+function updateProgress(){
+  document.getElementById('progBar').style.width=((currentQ+1)/TOTAL_QUESTIONS*100)+'%';
+}
+
+
+// Initialize the quiz when the script loads
+loadQuiz();
+</script>
+</body>
+</html>
